@@ -42,6 +42,14 @@ main{padding:8px calc(16px + env(safe-area-inset-right)) calc(20px + env(safe-ar
 .stage{border-radius:22px;overflow:hidden;background:#1D3A66;box-shadow:0 6px 0 #0003}
 video,img.m{display:block;width:100%}img.m{background:#fff}img.m+img.m{border-top:3px solid #1D3A66}
 .none{padding:40px 16px;text-align:center;font-weight:700;opacity:.8}
+video{cursor:pointer}
+video::-webkit-media-controls,video::-webkit-media-controls-panel,video::-webkit-media-controls-overlay-play-button,video::-webkit-media-controls-start-playback-button,video::-webkit-media-controls-play-button{display:none!important;-webkit-appearance:none;opacity:0}
+.ctrl{display:none;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:8px;font:inherit;font-size:16px;font-weight:900;min-height:48px;padding:0 18px;border:0;border-radius:999px;background:var(--yellow);color:var(--navy);box-shadow:0 4px 0 #0003}
+.pill:active,.seg button:active{transform:scale(.96)}
+.seg{display:inline-flex;padding:4px;border-radius:999px;background:var(--navy);border:2px solid var(--cyan)}
+.seg button{font:inherit;font-size:15px;font-weight:800;min-height:40px;min-width:72px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:#cfe3f5}
+.seg button[aria-pressed=true]{background:var(--yellow);color:var(--navy)}
 footer{font-size:12px;font-weight:700;opacity:.65;text-align:center;padding:4px 16px calc(14px + env(safe-area-inset-bottom))}
 footer a{color:inherit}
 @keyframes in{from{opacity:0;transform:translateY(6px)}}
@@ -51,11 +59,13 @@ footer a{color:inherit}
 <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="#8FD9F0" stroke-width="3" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M16 16l5 5"/></svg>
 <input id="q" type="search" placeholder="Søk" aria-label="Søk etter tegn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></div></header>
 <main><div class="meta" id="meta"></div><ul id="list" aria-live="polite"></ul>
-<section id="view"><div class="top"><button id="back" aria-label="Tilbake"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A1A3A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l-8 8 8 8"/></svg></button><h2 id="w"></h2></div><div class="stage" id="media"></div></section></main>
+<section id="view"><div class="top"><button id="back" aria-label="Tilbake"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A1A3A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l-8 8 8 8"/></svg></button><h2 id="w"></h2></div><div class="stage" id="media"></div><div class="ctrl" id="ctrl"><button id="again" class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v5h5"/></svg>Spill av igjen</button><div class="seg" role="group" aria-label="Fart"><button data-r="1">Normal</button><button data-r="0.5">0,5x</button></div></div></section></main>
 <footer>Kilde: <a href="https://www.minetegn.no/Tegnbanken-2016/">Tegnbanken / Statped</a> · CC BY-NC-ND 4.0</footer>
 <script>
 const norm=s=>s.toLowerCase().replace(/æ/g,'ae').replace(/ø/g,'o').replace(/å/g,'a').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const $=id=>document.getElementById(id),q=$('q'),L=$('list'),V=$('view'),M=$('meta');let W=[];
+const C=$('ctrl');function syncRate(){const r=localStorage.tegnRate||'1';document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===r))}
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{localStorage.tegnRate=b.dataset.r;syncRate();const v=V._v;if(v){v.defaultPlaybackRate=v.playbackRate=+b.dataset.r}});
 const SUGG=['mamma','pappa','spise','drikke','sove','leke','ferdig','mer','hjelp','takk'];
 const IV='<svg viewBox="0 0 24 24" fill="#00AEC2"><path d="M8 5.5v13l10.5-6.5z"/></svg>',II='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="M4 17l5-5 4 4 2.5-2.5L20 17"/></svg>';
 fetch('words.json').then(r=>r.json()).then(d=>{W=d.map(e=>({...e,n:norm(e.w)}));render()});
@@ -69,11 +79,17 @@ function render(){const s=norm(q.value.trim());L.innerHTML='';
  a.forEach((e,k)=>{const li=document.createElement('li');li.className='card'+(e.v?' v':'');li.style.animationDelay=Math.min(k,10)*15+'ms';li.setAttribute('role','button');li.tabIndex=0;
   li.innerHTML='<span></span>'+(e.v?IV:II);li.firstChild.textContent=e.w;li.setAttribute('aria-label',e.w+(e.v?', video':', bilde'));li.onclick=()=>show(e);L.appendChild(li)})}
 function show(e){$('w').textContent=e.w;const m=$('media');m.innerHTML='';
- if(e.v){const v=document.createElement('video');Object.assign(v,{src:e.v,autoplay:true,loop:true,muted:true,playsInline:true,controls:true});v.setAttribute('playsinline','');v.setAttribute('muted','');
-  v.onerror=()=>{m.innerHTML='';imgs(e,m)};m.appendChild(v)}else imgs(e,m);
+ if(e.v){const v=document.createElement('video');v.src=e.v;v.muted=true;v.playsInline=true;v.preload='auto';
+  ['playsinline','webkit-playsinline','muted','disablepictureinpicture','disableremoteplayback'].forEach(a=>v.setAttribute(a,''));
+  let n=0;const rate=()=>{const r=+(localStorage.tegnRate||1);v.defaultPlaybackRate=r;v.playbackRate=r};
+  const play=()=>{n=0;v.currentTime=0;rate();v.play().catch(()=>{})};
+  v.addEventListener('loadedmetadata',rate);
+  v.addEventListener('ended',()=>{n++;if(n<2){v.currentTime=0;rate();v.play().catch(()=>{})}else v.pause()});
+  v.onclick=play;v.onerror=()=>{m.innerHTML='';C.style.display='none';imgs(e,m)};m.appendChild(v);V._v=v;
+  C.style.display='flex';$('again').onclick=play;syncRate();play()}else{C.style.display='none';imgs(e,m)}
  L.style.display=M.style.display='none';V.style.display='block';q.blur();history.pushState({},'');scrollTo(0,0)}
 function imgs(e,m){(e.i||[]).forEach(u=>{const i=new Image();i.className='m';i.src=u;i.alt='Tegn for '+e.w;m.appendChild(i)});if(!e.i)m.innerHTML='<p class="none">Ingen video eller bilde</p>'}
-function hide(){V.style.display='none';L.style.display='grid';M.style.display='block';$('media').innerHTML=''}
+function hide(){V._v=null;V.style.display='none';L.style.display='grid';M.style.display='block';$('media').innerHTML=''}
 $('back').onclick=()=>history.back();onpopstate=hide;q.oninput=()=>{hide();render()};
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 </script></body></html>

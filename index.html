@@ -1,0 +1,36 @@
+<!doctype html><html lang="no"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tegnbanken</title><link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Tegn">
+<meta name="theme-color" content="#2b7de9"><link rel="apple-touch-icon" href="icon-180.png">
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,system-ui,sans-serif;background:#f4f7fb;color:#222}
+header{position:sticky;top:0;background:#2b7de9;padding:12px;padding-top:calc(12px + env(safe-area-inset-top))}
+input{width:100%;font-size:26px;padding:16px;border-radius:16px;border:0}
+#list{list-style:none;margin:0;padding:8px}#list li{background:#fff;margin:8px 0;padding:18px;font-size:24px;border-radius:14px;box-shadow:0 1px 3px #0002;display:flex;justify-content:space-between}
+.tag{font-size:20px}#view{display:none;padding:12px;text-align:center}
+#view h2{font-size:36px;margin:8px}video,img.m{width:100%;max-width:600px;border-radius:16px;background:#000}img.m{background:#fff}
+button{font-size:24px;padding:16px 24px;border-radius:14px;border:0;background:#2b7de9;color:#fff;margin:8px}
+footer{font-size:12px;color:#666;padding:16px;text-align:center}
+</style></head><body>
+<header><input id="q" type="search" placeholder="Søk etter ord …" autocomplete="off" autocorrect="off" autocapitalize="off"></header>
+<ul id="list"></ul>
+<div id="view"><button id="back">⬅ Tilbake</button><h2 id="w"></h2><div id="media"></div></div>
+<footer>Tegn fra <a href="https://www.minetegn.no/Tegnbanken-2016/">Tegnbanken (Statped)</a>, CC BY-NC-ND 4.0. 🎬 = video, 🖼️ = bilde</footer>
+<script>
+const norm=s=>s.toLowerCase().replace(/æ/g,'ae').replace(/ø/g,'o').replace(/å/g,'a').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+let W=[];const q=document.getElementById('q'),L=document.getElementById('list'),V=document.getElementById('view');
+fetch('words.json').then(r=>r.json()).then(d=>{W=d.map(e=>({...e,n:norm(e.w)}));render()});
+function render(){const s=norm(q.value.trim());L.innerHTML='';if(!s){L.innerHTML='<li>Skriv et ord for å finne tegnet 👆</li>';return}
+ const a=W.filter(e=>e.n.includes(s)).sort((x,y)=>(y.n.startsWith(s)-x.n.startsWith(s))||(x.n.length-y.n.length)).slice(0,60);
+ if(!a.length){L.innerHTML='<li>Fant ingen tegn</li>';return}
+ for(const e of a){const li=document.createElement('li');li.innerHTML=`<span></span><span class=tag>${e.v?'🎬':'🖼️'}</span>`;li.firstChild.textContent=e.w;li.onclick=()=>show(e);L.appendChild(li)}}
+function show(e){document.getElementById('w').textContent=e.w;const m=document.getElementById('media');m.innerHTML='';
+ if(e.v){const v=document.createElement('video');Object.assign(v,{src:e.v,autoplay:true,loop:true,muted:true,playsInline:true,controls:true});v.setAttribute('playsinline','');v.setAttribute('muted','');
+  v.onerror=()=>{m.innerHTML='';imgs(e,m)};m.appendChild(v)}else imgs(e,m);
+ L.style.display='none';V.style.display='block';q.blur();history.pushState({},'');scrollTo(0,0)}
+function imgs(e,m){(e.i||[]).forEach(u=>{const i=new Image();i.className='m';i.src=u;i.alt=e.w;m.appendChild(i)});if(!e.i)m.textContent='Ingen video eller bilde'}
+function hide(){V.style.display='none';L.style.display='block';document.getElementById('media').innerHTML=''}
+document.getElementById('back').onclick=()=>history.back();onpopstate=hide;q.oninput=()=>{hide();render()};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+</script></body></html>

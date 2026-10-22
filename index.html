@@ -76,7 +76,7 @@ footer a{color:inherit}
 <main><div class="meta" id="meta"></div><ul id="list" aria-live="polite"></ul>
 <section id="view"><div class="top"><button id="back" aria-label="Tilbake"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A1A3A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l-8 8 8 8"/></svg></button><h2 id="w"></h2></div><div class="stage" id="media"></div><div class="ctrl" id="ctrl"><button id="again" class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v5h5"/></svg>Spill av igjen</button><div class="seg" role="group" aria-label="Fart"><button data-r="1">Normal</button><button data-r="0.5">0,5x</button></div></div></section><section id="sent" hidden><div class="top"><button id="sback" class="backbtn" aria-label="Tilbake"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A1A3A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l-8 8 8 8"/></svg></button><h2 class="ttl">Setning</h2></div>
 <textarea id="stext" rows="2" placeholder="Skriv en setning" autocomplete="off" autocapitalize="sentences" spellcheck="false"></textarea>
-<div class="srow"><button id="splay" class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15L19.5 12z"/></svg><span>Spill</span></button><select id="svoice" aria-label="Stemme" hidden></select></div>
+<div class="srow"><button id="splay" class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15L19.5 12z"/></svg><span>Spill</span></button><div class="seg" id="stempo" role="group" aria-label="Tempo"><button data-t="0.9">Rolig</button><button data-t="1.1">Normal</button><button data-t="1.3">Rask</button></div><select id="svoice" aria-label="Stemme" hidden></select></div>
 <div id="swords" class="swords" aria-live="polite"></div>
 <div class="stage sstage" id="sstage"><div class="sword" id="sword"></div></div>
 <div class="ctrl" id="sctrl" style="display:none"><button id="spause" class="pill"><span>Pause</span></button><button id="sagain" class="pill ghost">Spill av igjen</button></div>
@@ -134,7 +134,7 @@ let VOICE=null;function loadVoices(){const all=speechSynthesis.getVoices(),nb=al
 if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
 $('svoice').onchange=e=>{localStorage.tegnVoice=e.target.value;loadVoices()};
 function speak(text){return new Promise(res=>{if(!('speechSynthesis' in window))return setTimeout(res,600);
- const u=new SpeechSynthesisUtterance(text);u.lang=VOICE?VOICE.lang:'nb-NO';if(VOICE)u.voice=VOICE;u.rate=0.9;let done=false;const f=()=>{if(!done){done=true;res()}};
+ const u=new SpeechSynthesisUtterance(text);u.lang=VOICE?VOICE.lang:'nb-NO';if(VOICE)u.voice=VOICE;u.rate=+(localStorage.tegnTempo||1.1);let done=false;const f=()=>{if(!done){done=true;res()}};
  u.onend=f;u.onerror=f;setTimeout(f,1500+text.length*180);speechSynthesis.speak(u)})}
 // avspilling
 let SEQ=[],POS=0,RUN=0,SV=null;const ST=$('sstage'),SW=$('sword');
@@ -142,7 +142,7 @@ function sv(){if(SV)return SV;SV=document.createElement('video');SV.muted=true;S
  ['playsinline','webkit-playsinline','muted','disablepictureinpicture','disableremoteplayback'].forEach(a=>SV.setAttribute(a,''));ST.prepend(SV);SV.onclick=()=>playFrom(POS);return SV}
 function drawWords(){$('swords').innerHTML='';SEQ.forEach((x,i)=>{const b=document.createElement('button');b.textContent=x.t;b.className=(x.e?'':'miss')+(i===POS?' on':'');b.onclick=()=>playFrom(i);$('swords').appendChild(b)})}
 function playVideo(v,src,id){return new Promise(res=>{const r=+(localStorage.tegnRate||1);const end=()=>{v.removeEventListener('ended',end);v.removeEventListener('error',end);res()};
- v.addEventListener('ended',end);v.addEventListener('error',end);if(v.getAttribute('src')!==src)v.src=src;else v.currentTime=0;v.defaultPlaybackRate=v.playbackRate=r;
+ const tu=()=>{if(v.duration&&v.currentTime>=v.duration*0.85){v.removeEventListener('timeupdate',tu);res()}};v.addEventListener('timeupdate',tu);v.addEventListener('ended',end);v.addEventListener('error',end);if(v.getAttribute('src')!==src)v.src=src;else v.currentTime=0;v.defaultPlaybackRate=v.playbackRate=r;
  v.addEventListener('loadedmetadata',()=>{v.defaultPlaybackRate=v.playbackRate=r},{once:true});v.play().catch(end);setTimeout(end,15000)})}
 const pre=document.createElement('link');pre.rel='preload';pre.as='video';
 function preload(i){const x=SEQ[i];if(x&&x.e&&x.e.v){const l=pre.cloneNode();l.href=x.e.v;document.head.appendChild(l);fetch(x.e.v,{mode:'no-cors'}).catch(()=>{})}}
@@ -150,7 +150,7 @@ async function playFrom(i){const run=++RUN;if('speechSynthesis' in window)speech
  for(POS=i;POS<SEQ.length;POS++){if(run!==RUN)return;const x=SEQ[POS];drawWords();preload(POS+1);const v=sv();
   const a=speak(x.t);let b;if(x.e&&x.e.v){SW.style.display='none';v.style.display='block';b=playVideo(v,x.e.v)}
   else{v.pause();v.style.display='none';SW.textContent=x.t;SW.style.display='grid';b=new Promise(r=>setTimeout(r,700))}
-  await Promise.all([a,b]);if(run!==RUN)return;await new Promise(r=>setTimeout(r,250))}
+  await Promise.all([a,b]);if(run!==RUN)return;await new Promise(r=>setTimeout(r,80))}
  if(run===RUN){POS=SEQ.length;drawWords();$('spause').firstChild.textContent='Spill'}}
 window.tegnState=()=>({POS,n:SEQ.length,run:RUN});
 function stop(){RUN++;if('speechSynthesis' in window)speechSynthesis.cancel();if(SV)SV.pause()}
@@ -159,6 +159,8 @@ $('sagain').onclick=()=>{if(SEQ.length)playFrom(0)};
 $('spause').onclick=()=>{if(!SEQ.length)return;const t=$('spause').firstChild;if(t.textContent==='Pause'){stop();t.textContent='Spill'}else playFrom(POS>=SEQ.length?0:POS)};
 function openSent(){hide();stop();S.hidden=false;L.style.display=M.style.display='none';document.querySelector('.search').style.display='none';$('sentBtn').style.display='none';history.pushState({s:1},'');setTimeout(()=>$('stext').focus(),50)}
 function closeSent(){stop();S.hidden=true;document.querySelector('.search').style.display='';$('sentBtn').style.display='';L.style.display='grid';M.style.display='block'}
+function syncTempo(){const t=localStorage.tegnTempo||'1.1';document.querySelectorAll('#stempo button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t))}
+document.querySelectorAll('#stempo button').forEach(b=>b.onclick=()=>{localStorage.tegnTempo=b.dataset.t;syncTempo()});syncTempo();
 $('sentBtn').onclick=openSent;$('sback').onclick=()=>history.back();
 $('back').onclick=()=>history.back();onpopstate=()=>{if(!S.hidden)closeSent();else hide()};q.oninput=()=>{hide();render()};
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');

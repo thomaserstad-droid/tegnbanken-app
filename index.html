@@ -102,6 +102,7 @@ body.imgmode:not(.home) .search input{padding-right:150px}
 #ctrl,#sctrl{justify-content:flex-start}
 #ictrl{gap:10px;flex-wrap:wrap}#ictrl .pill{flex:1 1 0;justify-content:center;min-width:0;padding:0 12px;font-size:15px}
 #toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--navy);color:#fff;font-weight:800;font-size:15px;padding:12px 20px;border-radius:999px;box-shadow:0 4px 0 #0005;opacity:0;pointer-events:none;transition:.2s;z-index:99;max-width:90vw;text-align:center}#toast.on{opacity:1;transform:translate(-50%,0)}
+#ictrl .pill:disabled{opacity:.4}
 footer{position:fixed;left:0;right:0;bottom:0}
 .hbtn{position:absolute;top:calc(12px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));background:var(--glass);color:#fff;box-shadow:none;font-size:14px;min-height:38px;padding:0 12px}
 body:not(.home) .hbtn{position:static;margin-left:auto}
@@ -156,19 +157,21 @@ function show(e){$('w').textContent=e.w;const m=$('media');m.innerHTML='';
 const IMGBASE=window.TEGN_IMG_BASE||'img/';const isrc=u=>/^https?:/.test(u)?u:IMGBASE+u.split('/').map(encodeURIComponent).join('/');
 let GAL=null;const BL=new Map();
 function toast(t){const x=$('toast');x.textContent=t;x.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>x.classList.remove('on'),1800)}
-function curImg(){if(!GAL)return null;const k=Math.round(GAL.scrollLeft/(GAL.clientWidth||1));const im=GAL.children[Math.min(k,GAL.children.length-1)];return im&&im.querySelector('img')}
-function curBlob(){const im=curImg();if(!im)return Promise.reject(new Error('Ingen bilde'));const u=im.currentSrc||im.src;if(!BL.has(u))BL.set(u,fetch(u).then(r=>{if(!r.ok)throw new Error(r.status);return r.blob()}).catch(err=>{BL.delete(u);throw err}));return BL.get(u)}
-function toPng(b){if(b.type==='image/png')return Promise.resolve(b);return createImageBitmap(b).then(bm=>{const c=document.createElement('canvas');c.width=bm.width;c.height=bm.height;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bm,0,0);return new Promise((res,rej)=>c.toBlob(p=>p?res(p):rej(new Error('png')),'image/png'))})}
-function fname(){const im=curImg();const w=($('w').textContent||'tegn').trim().replace(/[^\wæøåÆØÅ -]/g,'').replace(/\s+/g,'-')||'tegn';return w+'.jpg'}
-$('icopy').onclick=()=>{const p=curBlob().then(toPng);
- if(navigator.clipboard&&window.ClipboardItem){try{navigator.clipboard.write([new ClipboardItem({'image/png':p})]).then(()=>toast('Kopiert'),()=>toast('Kunne ikke kopiere'))}catch(err){toast('Kunne ikke kopiere')}}else toast('Kopiering støttes ikke her')};
-$('isave').onclick=async()=>{let b;try{b=await curBlob()}catch(err){toast('Fant ikke bildet');return}
- const f=new File([b],fname(),{type:b.type||'image/jpeg'});
+function curImg(){if(!GAL)return null;const gr=GAL.getBoundingClientRect(),cx=gr.left+gr.width/2;let best=null,d=1e9;[...GAL.children].forEach(f=>{const r=f.getBoundingClientRect(),x=Math.abs(r.left+r.width/2-cx);if(x<d){d=x;best=f}});return best&&best.querySelector('img')}
+const local=im=>{try{return new URL(im.currentSrc||im.src).origin===location.origin}catch(e){return false}};
+function drawBlob(im){return new Promise((res,rej)=>{const go=()=>{try{if(!im.naturalWidth)return rej(new Error('ikke lastet'));const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0);c.toBlob(b=>b?res(b):rej(new Error('toBlob')),'image/png')}catch(e){rej(e)}};im.complete?go():im.addEventListener('load',go,{once:true})})}
+function prep(im){if(!im)return Promise.reject(new Error('Ingen bilde'));if(!im._b){im._b=drawBlob(im).then(b=>(im._blob=b));im._b.catch(()=>{im._b=null})}return im._b}
+function syncAct(){const im=curImg();const ok=!!im&&local(im);$('icopy').disabled=$('isave').disabled=!ok;if(ok)prep(im).catch(()=>{})}
+function fname(){const w=($('w').textContent||'tegn').trim().replace(/[^\wæøåÆØÅ -]/g,'').replace(/\s+/g,'-')||'tegn';return w+'.png'}
+$('icopy').onclick=()=>{const im=curImg();if(!im||!local(im)){toast('Fant ikke bildet');return}const p=im._blob?Promise.resolve(im._blob):prep(im);
+ if(navigator.clipboard&&window.ClipboardItem){try{navigator.clipboard.write([new ClipboardItem({'image/png':p})]).then(()=>toast('Kopiert'),err=>{console.warn(err);toast('Kunne ikke kopiere')})}catch(err){toast('Kunne ikke kopiere')}}else toast('Kopiering støttes ikke her')};
+$('isave').onclick=async()=>{const im=curImg();if(!im||!local(im)){toast('Fant ikke bildet');return}let b=im._blob;if(!b){try{b=await prep(im)}catch(err){toast('Fant ikke bildet');return}}
+ const f=new File([b],fname(),{type:'image/png'});
  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f]})}catch(err){if(err.name!=='AbortError')toast('Kunne ikke dele')}return}
  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('Lastet ned')};
 function imgs(e,m){const n=(e.i||[]).length;if(n){const g=document.createElement('div');g.className='gal';const d=document.createElement('div');d.className='dots';
- e.i.forEach((u,k)=>{const f=document.createElement('div');f.className='slide';const i=new Image();i.src=isrc(u);i.alt='Tegn for '+e.w+(n>1?' ('+(k+1)+' av '+n+')':'');i.onerror=()=>{f.remove();d.lastChild&&d.lastChild.remove();if(g.children.length<2)d.remove();if(!g.children.length)m.innerHTML='<p class="none">Bildet mangler</p>'};f.appendChild(i);g.appendChild(f);if(n>1){const b=document.createElement('i');d.appendChild(b)}});
- m.appendChild(g);GAL=g;$('ictrl').style.display='flex';setTimeout(()=>curBlob().catch(()=>{}),300);if(n>1){m.appendChild(d);const upd=()=>{const k=Math.round(g.scrollLeft/g.clientWidth);[...d.children].forEach((b,j)=>b.classList.toggle('on',j===k))};g.addEventListener('scroll',upd,{passive:true});d.firstChild.classList.add('on');
+ e.i.forEach((u,k)=>{const f=document.createElement('div');f.className='slide';const i=new Image();i.src=isrc(u);i.alt='Tegn for '+e.w+(n>1?' ('+(k+1)+' av '+n+')':'');i.onerror=()=>{f.remove();d.lastChild&&d.lastChild.remove();if(g.children.length<2)d.remove();syncAct();if(!g.children.length)m.innerHTML='<p class="none">Bildet mangler</p>'};f.appendChild(i);g.appendChild(f);if(n>1){const b=document.createElement('i');d.appendChild(b)}});
+ m.appendChild(g);GAL=g;$('ictrl').style.display='flex';g.addEventListener('scroll',()=>{clearTimeout(g._t);g._t=setTimeout(syncAct,120)},{passive:true});g.querySelectorAll('img').forEach(i=>i.addEventListener('load',()=>{if(curImg()===i)syncAct()}));setTimeout(syncAct,50);if(n>1){m.appendChild(d);const upd=()=>{const k=Math.round(g.scrollLeft/g.clientWidth);[...d.children].forEach((b,j)=>b.classList.toggle('on',j===k))};g.addEventListener('scroll',upd,{passive:true});d.firstChild.classList.add('on');
   [...d.children].forEach((b,j)=>b.onclick=()=>g.scrollTo({left:j*g.clientWidth,behavior:'smooth'}))}}
  if(!e.i)m.innerHTML='<p class="none">Ingen video eller bilde</p>'}
 function hide(){$('ictrl').style.display='none';GAL=null;V._v=null;V.style.display='none';L.style.display='grid';M.style.display='block';$('media').innerHTML=''}

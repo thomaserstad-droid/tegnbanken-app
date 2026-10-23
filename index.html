@@ -100,6 +100,8 @@ body.imgmode:not(.home) .search input{padding-right:150px}
 .tbox{position:relative}.tbox .clr{top:10px;transform:none}#stext{padding-right:52px}
 .search .ind svg{position:static;transform:none;width:14px;height:14px}.search .clr svg{position:static;transform:none;width:16px;height:16px}
 #ctrl,#sctrl{justify-content:flex-start}
+#ictrl{gap:10px;flex-wrap:wrap}#ictrl .pill{flex:1 1 0;justify-content:center;min-width:0;padding:0 12px;font-size:15px}
+#toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--navy);color:#fff;font-weight:800;font-size:15px;padding:12px 20px;border-radius:999px;box-shadow:0 4px 0 #0005;opacity:0;pointer-events:none;transition:.2s;z-index:99;max-width:90vw;text-align:center}#toast.on{opacity:1;transform:translate(-50%,0)}
 footer{position:fixed;left:0;right:0;bottom:0}
 .hbtn{position:absolute;top:calc(12px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));background:var(--glass);color:#fff;box-shadow:none;font-size:14px;min-height:38px;padding:0 12px}
 body:not(.home) .hbtn{position:static;margin-left:auto}
@@ -113,7 +115,7 @@ footer a{color:inherit}
 <input id="q" type="search" placeholder="Søk" aria-label="Søk etter tegn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"><button id="qx" class="clr" aria-label="Tøm" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button id="imgInd" class="ind" aria-label="Slå av tegnbilder" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="M4 17l5-5 4 4 2.5-2.5L20 17"/></svg>Bilder<span aria-hidden="true">×</span></button></div>
 <div class="opts" id="opts"><button id="sentBtn" class="chip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 7h16M4 12h10M4 17h13"/></svg>Skriv og les setning</button><button id="imgBtn" class="chip" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="M4 17l5-5 4 4 2.5-2.5L20 17"/></svg>Søk bare tegnbilder</button></div></header>
 <main><div class="meta" id="meta"></div><ul id="list" aria-live="polite"></ul>
-<section id="view"><div class="top"><button id="back" aria-label="Tilbake"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A1A3A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l-8 8 8 8"/></svg></button><h2 id="w"></h2></div><div class="stage" id="media"></div><div class="ctrl" id="ctrl"><button id="again" class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15L19.5 12z"/></svg>Spill</button></div></section><section id="sent" hidden><div class="top"><button id="sback" class="backbtn" aria-label="Tilbake"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A1A3A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l-8 8 8 8"/></svg></button><h2 class="ttl">Skriv og les setning</h2></div>
+<section id="view"><div class="top"><button id="back" aria-label="Tilbake"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A1A3A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l-8 8 8 8"/></svg></button><h2 id="w"></h2></div><div class="stage" id="media"></div><div class="ctrl" id="ictrl" style="display:none"><button id="icopy" class="pill ghost"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>Kopier bilde</button><button id="isave" class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Lagre i Bilder</button></div><div class="ctrl" id="ctrl"><button id="again" class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15L19.5 12z"/></svg>Spill</button></div></section><section id="sent" hidden><div class="top"><button id="sback" class="backbtn" aria-label="Tilbake"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A1A3A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l-8 8 8 8"/></svg></button><h2 class="ttl">Skriv og les setning</h2></div>
 <div class="sset"><div class="seg sm" id="stempo" role="group" aria-label="Tempo"><button data-t="rolig">Rolig</button><button data-t="rask">Rask</button></div></div>
 <div class="tbox"><textarea id="stext" rows="2" placeholder="Skriv en setning" autocomplete="off" autocapitalize="sentences" spellcheck="false"></textarea><button id="sx" class="clr" aria-label="Tøm" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 <div class="srow"><button id="splay" class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15L19.5 12z"/></svg><span>Spill</span></button></div>
@@ -149,14 +151,27 @@ function show(e){$('w').textContent=e.w;const m=$('media');m.innerHTML='';
   v.addEventListener('loadedmetadata',rate);
   v.addEventListener('ended',()=>{n++;if(n<2){v.currentTime=0;rate();v.play().catch(()=>{})}else v.pause()});
   v.onclick=play;v.onerror=()=>{m.innerHTML='';C.style.display='none';imgs(e,m)};m.appendChild(v);V._v=v;
-  C.style.display='flex';$('again').onclick=play;syncRate();play()}else{C.style.display='none';imgs(e,m)}
+  C.style.display='flex';$('ictrl').style.display='none';$('again').onclick=play;syncRate();play()}else{C.style.display='none';imgs(e,m)}
  L.style.display=M.style.display='none';V.style.display='block';q.blur();history.pushState({},'');scrollTo(0,0)}
+const IMGBASE=window.TEGN_IMG_BASE||'img/';const isrc=u=>/^https?:/.test(u)?u:IMGBASE+u.split('/').map(encodeURIComponent).join('/');
+let GAL=null;const BL=new Map();
+function toast(t){const x=$('toast');x.textContent=t;x.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>x.classList.remove('on'),1800)}
+function curImg(){if(!GAL)return null;const k=Math.round(GAL.scrollLeft/(GAL.clientWidth||1));const im=GAL.children[Math.min(k,GAL.children.length-1)];return im&&im.querySelector('img')}
+function curBlob(){const im=curImg();if(!im)return Promise.reject(new Error('Ingen bilde'));const u=im.currentSrc||im.src;if(!BL.has(u))BL.set(u,fetch(u).then(r=>{if(!r.ok)throw new Error(r.status);return r.blob()}).catch(err=>{BL.delete(u);throw err}));return BL.get(u)}
+function toPng(b){if(b.type==='image/png')return Promise.resolve(b);return createImageBitmap(b).then(bm=>{const c=document.createElement('canvas');c.width=bm.width;c.height=bm.height;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bm,0,0);return new Promise((res,rej)=>c.toBlob(p=>p?res(p):rej(new Error('png')),'image/png'))})}
+function fname(){const im=curImg();const w=($('w').textContent||'tegn').trim().replace(/[^\wæøåÆØÅ -]/g,'').replace(/\s+/g,'-')||'tegn';return w+'.jpg'}
+$('icopy').onclick=()=>{const p=curBlob().then(toPng);
+ if(navigator.clipboard&&window.ClipboardItem){try{navigator.clipboard.write([new ClipboardItem({'image/png':p})]).then(()=>toast('Kopiert'),()=>toast('Kunne ikke kopiere'))}catch(err){toast('Kunne ikke kopiere')}}else toast('Kopiering støttes ikke her')};
+$('isave').onclick=async()=>{let b;try{b=await curBlob()}catch(err){toast('Fant ikke bildet');return}
+ const f=new File([b],fname(),{type:b.type||'image/jpeg'});
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f]})}catch(err){if(err.name!=='AbortError')toast('Kunne ikke dele')}return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('Lastet ned')};
 function imgs(e,m){const n=(e.i||[]).length;if(n){const g=document.createElement('div');g.className='gal';const d=document.createElement('div');d.className='dots';
- e.i.forEach((u,k)=>{const f=document.createElement('div');f.className='slide';const i=new Image();i.src=u;i.alt='Tegn for '+e.w+(n>1?' ('+(k+1)+' av '+n+')':'');i.onerror=()=>{f.remove();d.lastChild&&d.lastChild.remove();if(g.children.length<2)d.remove();if(!g.children.length)m.innerHTML='<p class="none">Bildet mangler</p>'};f.appendChild(i);g.appendChild(f);if(n>1){const b=document.createElement('i');d.appendChild(b)}});
- m.appendChild(g);if(n>1){m.appendChild(d);const upd=()=>{const k=Math.round(g.scrollLeft/g.clientWidth);[...d.children].forEach((b,j)=>b.classList.toggle('on',j===k))};g.addEventListener('scroll',upd,{passive:true});d.firstChild.classList.add('on');
+ e.i.forEach((u,k)=>{const f=document.createElement('div');f.className='slide';const i=new Image();i.src=isrc(u);i.alt='Tegn for '+e.w+(n>1?' ('+(k+1)+' av '+n+')':'');i.onerror=()=>{f.remove();d.lastChild&&d.lastChild.remove();if(g.children.length<2)d.remove();if(!g.children.length)m.innerHTML='<p class="none">Bildet mangler</p>'};f.appendChild(i);g.appendChild(f);if(n>1){const b=document.createElement('i');d.appendChild(b)}});
+ m.appendChild(g);GAL=g;$('ictrl').style.display='flex';setTimeout(()=>curBlob().catch(()=>{}),300);if(n>1){m.appendChild(d);const upd=()=>{const k=Math.round(g.scrollLeft/g.clientWidth);[...d.children].forEach((b,j)=>b.classList.toggle('on',j===k))};g.addEventListener('scroll',upd,{passive:true});d.firstChild.classList.add('on');
   [...d.children].forEach((b,j)=>b.onclick=()=>g.scrollTo({left:j*g.clientWidth,behavior:'smooth'}))}}
  if(!e.i)m.innerHTML='<p class="none">Ingen video eller bilde</p>'}
-function hide(){V._v=null;V.style.display='none';L.style.display='grid';M.style.display='block';$('media').innerHTML=''}
+function hide(){$('ictrl').style.display='none';GAL=null;V._v=null;V.style.display='none';L.style.display='grid';M.style.display='block';$('media').innerHTML=''}
 
 // ---- Setningsmodus ----
 const S=$('sent');let IDX=null;
@@ -223,4 +238,4 @@ function setImg(on){if(on)sessionStorage.tegnImg='1';else sessionStorage.removeI
 $('imgBtn').onclick=()=>setImg(!IMG());$('imgInd').onclick=()=>setImg(false);syncImg();$('sback').onclick=()=>history.back();
 $('back').onclick=()=>history.back();onpopstate=()=>{if(!S.hidden)closeSent();else hide()};q.oninput=()=>{hide();render()};
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
-</script></body></html>
+</script><div id="toast" role="status" aria-live="polite"></div></body></html>

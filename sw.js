@@ -1,4 +1,4 @@
-const C='tegn-v11',AC='tegn-audio-v1';
+const C='tegn-v12',AC='tegn-audio-v1';
 const FILES=['./','index.html','words.json','audio.json','manifest.json','fonts/Nunito.ttf','favicon.svg','favicon-32.png','icon-180.png','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(FILES)))});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C&&x!==AC).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));

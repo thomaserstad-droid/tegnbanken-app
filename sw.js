@@ -1,13 +1,14 @@
-const C='tegn-v17',AC='tegn-audio-v1',IC='tegn-img-v1';
+const C='tegn-v18',AC='tegn-audio-v1',IC='tegn-img-v1';
 const FILES=['./','index.html','words.json','audio.json','manifest.json','fonts/Nunito.ttf','favicon.svg','favicon-32.png','icon-180.png','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(FILES)))});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C&&x!==AC&&x!==IC).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));
-async function audio(req){const url=req.url.split('?')[0],c=await caches.open(AC);let r=await c.match(url);
- if(!r){r=await fetch(url);if(r.ok)c.put(url,r.clone());else return r}
+async function audio(req,tts){const url=tts?req.url:req.url.split('?')[0],c=await caches.open(AC);let r=await c.match(url);
+ if(!r){r=await fetch(url);if(tts&&(r.status!==200||r.redirected||!/audio/.test(r.headers.get('content-type')||'')))return new Response('',{status:404});if(r.ok)c.put(url,r.clone());else return r}
  const range=req.headers.get('range');if(!range)return r;
  const buf=await r.arrayBuffer(),m=/bytes=(\d*)-(\d*)/.exec(range)||[];const s=+(m[1]||0),e=m[2]?+m[2]:buf.byteLength-1;
  return new Response(buf.slice(s,e+1),{status:206,headers:{'Content-Type':'audio/mpeg','Content-Range':`bytes ${s}-${e}/${buf.byteLength}`,'Content-Length':String(e-s+1),'Accept-Ranges':'bytes'}})}
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.origin!==location.origin)return;
  if(u.pathname.includes('/audio/')&&u.pathname.endsWith('.mp3'))return e.respondWith(audio(e.request).catch(()=>fetch(e.request)));
+ if(u.pathname.endsWith('/tts'))return e.respondWith(audio(e.request,1).catch(()=>new Response('',{status:503})));
  if(u.pathname.includes('/img/'))return e.respondWith(caches.open(IC).then(c=>c.match(e.request).then(h=>h||fetch(e.request).then(r=>{if(r.ok&&!r.redirected&&(r.headers.get('content-type')||'').startsWith('image/'))c.put(e.request,r.clone());return r}))));
  e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open(C).then(x=>x.put(e.request,c));return r}).catch(()=>caches.match(e.request)))});

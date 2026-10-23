@@ -198,7 +198,7 @@ window.tegnParse=parse;
 let AMAP=null;fetch('audio.json').then(r=>r.json()).then(d=>AMAP=d).catch(()=>{});
 const TEMPO={rolig:{r:0.75,p:400},rask:{r:1.2,p:80}};const tempo=()=>TEMPO[localStorage.tegnTempo2]||TEMPO.rolig;
 const AU=new Audio();AU.preload='auto';AU.setAttribute('playsinline','');window.AU=AU;
-function audioFor(x){if(!AMAP)return null;let id=AMAP[norm(x.t)];if(id==null&&x.e)id=AMAP[ckey(x.e.w)];return id==null?null:'audio/'+id+'.mp3'}
+function audioFor(x){if(!AMAP)return null;let id=AMAP[norm(x.t)];return id==null?null:'audio/'+id+'.mp3'}
 let VOICE=null;const KEEP=[];
 function loadVoices(){try{const nb=speechSynthesis.getVoices().filter(v=>/^nb|^no/i.test(v.lang));VOICE=nb.find(v=>/nora/i.test(v.name))||nb.find(v=>/^nb/i.test(v.lang))||null}catch(e){}}
 if('speechSynthesis' in window){loadVoices();speechSynthesis.addEventListener&&speechSynthesis.addEventListener('voiceschanged',loadVoices)}
@@ -220,7 +220,8 @@ function playVideo(v,src){return new Promise(res=>{const r=1;let done=false;cons
 function preload(i){const x=SEQ[i];if(!x)return;if(x.e&&x.e.v)fetch(x.e.v,{mode:'no-cors'}).catch(()=>{});const a=audioFor(x);if(a)fetch(a).catch(()=>{})}
 function setBtn(){return;$('spause').innerHTML=PAUSED||POS>=SEQ.length?'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15L19.5 12z"/></svg>Spill':'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>Pause'}
 // Viktig for iOS: første lyd og video startes synkront i trykket (ingen await/cancel før).
-function playFrom(i){const run=++RUN;PAUSED=false;ST.style.display='block';$('sctrl').style.display='flex';$('splay').parentNode.style.display='none';POS=i;setBtn();step(run)}
+let UNL=0;function unlockTTS(){if(UNL||!('speechSynthesis' in window))return;UNL=1;try{loadVoices();const u=new SpeechSynthesisUtterance(' ');u.volume=0;u.lang='nb-NO';KEEP.push(u);speechSynthesis.speak(u)}catch(e){}}
+function playFrom(i){unlockTTS();const run=++RUN;PAUSED=false;ST.style.display='block';$('sctrl').style.display='flex';$('splay').parentNode.style.display='none';POS=i;setBtn();step(run)}
 async function step(run){while(POS<SEQ.length){if(run!==RUN)return;const x=SEQ[POS];drawWords();const v=sv();
   const a=say(x);let b;if(x.e&&x.e.v){SW.style.display='none';v.style.display='block';b=playVideo(v,x.e.v)}
   else{v.pause();v.style.display='none';SW.textContent=x.t;SW.style.display='grid';b=new Promise(r=>setTimeout(r,700))}

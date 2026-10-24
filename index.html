@@ -101,7 +101,7 @@ body.imgmode:not(.home) .search input{padding-right:150px}
 .search .ind svg{position:static;transform:none;width:14px;height:14px}.search .clr svg{position:static;transform:none;width:16px;height:16px}
 #ctrl,#sctrl{justify-content:flex-start}
 #ictrl{gap:10px;flex-wrap:wrap}#ictrl .pill{flex:1 1 0;justify-content:center;min-width:0;padding:0 12px;font-size:15px}
-#toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--navy);color:#fff;font-weight:800;font-size:15px;padding:12px 20px;border-radius:999px;box-shadow:0 4px 0 #0005;opacity:0;pointer-events:none;transition:.2s;z-index:99;max-width:90vw;text-align:center}#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translate(-50%,-20px);background:var(--navy);color:#fff;font-weight:800;font-size:15px;padding:12px 20px;border-radius:999px;box-shadow:0 4px 0 #0005;opacity:0;pointer-events:none;transition:.2s;z-index:99;max-width:90vw;text-align:center}#toast.on{opacity:1;transform:translate(-50%,0)}
 #ictrl .pill:disabled{opacity:.4}
 footer{position:fixed;left:0;right:0;bottom:0}
 .hbtn{position:absolute;top:calc(12px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));background:var(--glass);color:#fff;box-shadow:none;font-size:14px;min-height:38px;padding:0 12px}
@@ -161,7 +161,7 @@ function show(e){$('w').textContent=e.w;const m=$('media');m.innerHTML='';
  L.style.display=M.style.display='none';V.style.display='block';q.blur();history.pushState({},'');scrollTo(0,0)}
 const IMGBASE=window.TEGN_IMG_BASE||'img/';const isrc=u=>/^https?:/.test(u)?u:IMGBASE+u.split('/').map(encodeURIComponent).join('/');
 let GAL=null;const BL=new Map();
-function toast(t){const x=$('toast');x.textContent=t;x.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>x.classList.remove('on'),1800)}
+function toast(t){const x=$('toast');x.textContent=t;x.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>x.classList.remove('on'),t.length>40?3600:1800)}
 function curImg(){if(!GAL)return null;const gr=GAL.getBoundingClientRect(),cx=gr.left+gr.width/2;let best=null,d=1e9;[...GAL.children].forEach(f=>{const r=f.getBoundingClientRect(),x=Math.abs(r.left+r.width/2-cx);if(x<d){d=x;best=f}});return best&&best.querySelector('img')}
 const local=im=>{try{return new URL(im.currentSrc||im.src).origin===location.origin}catch(e){return false}};
 function drawBlob(im){return new Promise((res,rej)=>{const go=()=>{try{if(!im.naturalWidth)return rej(new Error('ikke lastet'));const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0);c.toBlob(b=>b?res(b):rej(new Error('toBlob')),'image/png')}catch(e){rej(e)}};im.complete?go():im.addEventListener('load',go,{once:true})})}
@@ -254,16 +254,26 @@ function syncImg(){const on=IMG();$('imgBtn').setAttribute('aria-pressed',on);$(
 function setImg(on){if(on)sessionStorage.tegnImg='1';else sessionStorage.removeItem('tegnImg');syncImg();hide();render()}
 $('imgBtn').onclick=()=>setImg(!IMG());$('imgInd').onclick=()=>setImg(false);syncImg();$('sback').onclick=()=>history.back();
 $('back').onclick=()=>history.back();onpopstate=()=>{if(!S.hidden)closeSent();else hide()};q.oninput=()=>{hide();render()};
-function micInit(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return;document.body.classList.add('hasmic');let rec=null,cur=null;
- const off=()=>{if(cur)cur.classList.remove('on');cur=null;rec=null};
+function micInit(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return;document.body.classList.add('hasmic');let rec=null,cur=null,wd=0;
+ const SA=!!navigator.standalone; // iPhone-app fra Hjem-skjermen
+ const off=()=>{clearTimeout(wd);if(cur)cur.classList.remove('on');cur=null;rec=null};
+ const ERR={'not-allowed':'Mikrofon ikke tillatt','service-not-allowed':'Diktering ikke tilgjengelig her','no-speech':'Hørte ingenting','audio-capture':'Fant ingen mikrofon','network':'Ingen nettverk for diktering','aborted':'Diktering avbrutt','language-not-supported':'Språket støttes ikke'};
  const bind=(inp,btn)=>{btn.addEventListener('pointerdown',e=>e.preventDefault());btn.addEventListener('mousedown',e=>e.preventDefault());
-  btn.onclick=()=>{if(rec){const same=cur===btn;try{rec.stop()}catch(e){}off();if(same)return}
-   let r;try{r=new R()}catch(e){toast('Diktering støttes ikke her');return}
+  btn.onclick=()=>{if(rec){try{rec.stop()}catch(e){}const same=cur===btn;off();if(same)return}
+   // åpne tastaturet i selve trykket (iOS tillater fokus kun her) – tastaturet har egen mikrofon som reserve
+   if(SA&&document.activeElement!==inp)try{inp.focus()}catch(e){}
+   let r;try{r=new R()}catch(e){toast('Diktering støttes ikke her – bruk mikrofonen på tastaturet');try{inp.focus()}catch(_){}return}
+   let got=false,failed=false;
+   const fail=m=>{if(failed)return;failed=true;toast(m);try{inp.focus()}catch(e){}off()};
    r.lang='nb-NO';r.interimResults=true;r.continuous=false;r.maxAlternatives=1;const base=inp.value&&inp.tagName==='TEXTAREA'?inp.value.replace(/\s*$/,' '):'';
-   r.onresult=e=>{let t='';for(const x of e.results)t+=x[0].transcript;inp.value=(base+t).replace(/^\s+/,'');inp.dispatchEvent(new Event('input',{bubbles:true}))};
-   r.onerror=e=>{const m={'not-allowed':'Mikrofon ikke tillatt','service-not-allowed':'Diktering ikke tilgjengelig','no-speech':'Hørte ingenting','audio-capture':'Fant ingen mikrofon','network':'Ingen nettverk for diktering'}[e.error];if(m)toast(m);off()};
-   r.onend=()=>{if(rec===r)off()};
-   try{r.start();rec=r;cur=btn;btn.classList.add('on')}catch(e){toast('Kunne ikke starte diktering');off()}}};
+   r.onstart=r.onaudiostart=()=>{clearTimeout(wd)};
+   r.onresult=e=>{got=true;clearTimeout(wd);let t='';for(const x of e.results)t+=x[0].transcript;inp.value=(base+t).replace(/^\s+/,'');inp.dispatchEvent(new Event('input',{bubbles:true}))};
+   r.onerror=e=>{const c=e&&e.error||'ukjent';if(c==='no-speech'||c==='aborted'){if(c==='aborted'&&rec!==r)return;fail((ERR[c]||c)+' – prøv igjen eller bruk mikrofonen på tastaturet')}else fail((ERR[c]||'Diktering feilet')+' ('+c+') – bruk mikrofonen på tastaturet')};
+   r.onend=()=>{if(rec!==r)return;if(!got&&!failed)fail('Hørte ingenting – bruk mikrofonen på tastaturet');else off()};
+   try{r.start();rec=r;cur=btn;btn.classList.add('on');
+    // iOS-appen kan la start() feile uten noen hendelse: gi opp etter 4 s uten lyd/resultat
+    wd=setTimeout(()=>{if(rec===r&&!got){try{r.abort()}catch(e){}fail('Diktering startet ikke – bruk mikrofonen på tastaturet')}},4000)}
+   catch(e){fail('Kunne ikke starte diktering – bruk mikrofonen på tastaturet')}}};
  bind(q,$('qm'));bind($('stext'),$('sm'))}
 micInit();useSent(false);
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');

@@ -236,8 +236,11 @@ window.tegnState=()=>({POS,n:SEQ.length,run:RUN});
 function stop(){RUN++;AU.pause();if(SV)SV.pause();try{if(speechSynthesis.speaking)speechSynthesis.cancel()}catch(e){}}
 $('splay').onclick=()=>{SEQ=parse($('stext').value);if(!SEQ.length)return;preloadAll();$('stext').blur();playFrom(0)};
 $('sagain').onclick=()=>{const t=parse($('stext').value);if(t.length){SEQ=t;playFrom(0)}};
-function openSent(){$('opts').style.display='none';document.body.classList.remove('home');hide();stop();S.hidden=false;L.style.display=M.style.display='none';document.querySelector('.search').style.display='none';history.pushState({s:1},'');setTimeout(()=>$('stext').focus(),50)}
-function closeSent(){$('splay').parentNode.style.display='';$('opts').style.display='';render();stop();S.hidden=true;document.querySelector('.search').style.display='';L.style.display='grid';M.style.display='block'}
+// Kun ett tekstfelt i DOM om gangen (WebKit viser pil-opp/ned bare når flere felt kan navigeres)
+const TB=document.querySelector('.tbox'),TBP=document.createComment('tbox');TB.before(TBP);
+function useSent(on){if(on){if(!TB.isConnected)TBP.after(TB);q.disabled=true;q.setAttribute('inert','')}else{q.disabled=false;q.removeAttribute('inert');if(TB.isConnected)TB.remove()}}
+function openSent(){useSent(true);$('opts').style.display='none';document.body.classList.remove('home');hide();stop();S.hidden=false;L.style.display=M.style.display='none';document.querySelector('.search').style.display='none';history.pushState({s:1},'');setTimeout(()=>$('stext').focus(),50)}
+function closeSent(){useSent(false);$('splay').parentNode.style.display='';$('opts').style.display='';render();stop();S.hidden=true;document.querySelector('.search').style.display='';L.style.display='grid';M.style.display='block'}
 function syncSet(){const t=TEMPO[localStorage.tegnTempo2]?localStorage.tegnTempo2:'rolig';
  document.querySelectorAll('#stempo button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));}
 document.querySelectorAll('#stempo button').forEach(b=>b.onclick=()=>{localStorage.tegnTempo2=b.dataset.t;syncSet()});
@@ -262,6 +265,6 @@ function micInit(){const R=window.SpeechRecognition||window.webkitSpeechRecognit
    r.onend=()=>{if(rec===r)off()};
    try{r.start();rec=r;cur=btn;btn.classList.add('on')}catch(e){toast('Kunne ikke starte diktering');off()}}};
  bind(q,$('qm'));bind($('stext'),$('sm'))}
-micInit();
+micInit();useSent(false);
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 </script><div id="toast" role="status" aria-live="polite"></div></body></html>

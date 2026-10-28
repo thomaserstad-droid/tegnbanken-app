@@ -1,0 +1,4 @@
+lemmas.json: bøyningsform -> grunnform, avledet fra Norsk ordbank – bokmål 2005 (fullformsliste, dump 1. februar 2022)
+© Språkbanken, Nasjonalbiblioteket. Lisens: CC BY 4.0 – https://creativecommons.org/licenses/by/4.0/
+Kilde: https://www.nb.no/sprakbanken/ressurskatalog/oai-nb-no-sbr-5/
+Utvalget er begrenset til former (substantiv, verb, adjektiv) hvis grunnform finnes i Tegnbanken (words.json).

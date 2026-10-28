@@ -144,8 +144,11 @@ function chips(){L.innerHTML='<li><div class="chips">'+SUGG.map(s=>`<button data
  L.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{q.value=b.dataset.s;render()})}
 function render(){const s=norm(q.value.trim());L.innerHTML='';
  if(!s){M.textContent='';document.body.classList.add('home');return}document.body.classList.remove('home');
- const all=W.filter(e=>e.n.includes(s)&&(!IMG()||e.i)),a=all.sort((x,y)=>(y.n.startsWith(s)-x.n.startsWith(s))||(x.n.length-y.n.length)).slice(0,60);
- M.textContent=all.length?all.length+' treff':'Ingen treff';
+ let all=W.filter(e=>e.n.includes(s)&&(!IMG()||e.i)),note='';
+ all.sort((x,y)=>(y.n.startsWith(s)-x.n.startsWith(s))||(x.n.length-y.n.length));
+ const l=lemOf(q.value.trim());if(l&&(!IMG()||l.i)&&!all.some(e=>e.n===s&&e.v)){if(!all.length)note=1;all=[l,...all.filter(e=>e!==l)]}
+ const a=all.slice(0,60);
+ M.textContent=note?'Grunnform: '+all[0].w.replace(/\s*\(.*?\)|\s+\d+$/g,''):all.length?all.length+' treff':'Ingen treff';
  if(!all.length)return;
  a.forEach((e,k)=>{const li=document.createElement('li');li.className='card'+(e.v&&!IMG()?' v':'');li.style.animationDelay=Math.min(k,10)*15+'ms';li.setAttribute('role','button');li.tabIndex=0;
   li.innerHTML='<span></span>'+(e.v&&!IMG()?IV:II);li.firstChild.textContent=e.w;li.setAttribute('aria-label',e.w+(e.v?', video':', bilde'));li.onclick=()=>show(e);L.appendChild(li)})}
@@ -187,15 +190,24 @@ const ckey=w=>norm(w.replace(/\(.*?\)/g,'').replace(/\s+\d+(\s+[a-z])?$/,'').tri
 function buildIdx(){IDX=new Map();for(const e of W){const k=ckey(e.w);const o=IDX.get(k);
  const sc=x=>(x.v?0:4)+(/alfabet/i.test(x.w)||/^[A-ZÆØÅ]$/.test(x.w)?2:0)+(/\(/.test(x.w)?1:0);const better=!o||sc(e)<sc(o)||(sc(e)===sc(o)&&e.w.localeCompare(o.w,'nb',{numeric:true})<0);if(better)IDX.set(k,e)}}
 const SUF=['ene','ane','ene','ert','ende','ene','en','et','er','ar','te','de','ne','a','e','r','s','t'];
-function lookup(t){const k=norm(t);if(IDX.has(k))return IDX.get(k);
+let LEM=null;fetch('lemmas.json').then(r=>r.json()).then(d=>{LEM=new Map();for(const g in d)for(const f of d[g].split(' '))LEM.set(f,g)}).catch(()=>{});
+function lemOf(t){if(!IDX)buildIdx();const g=LEM&&LEM.get(norm(t));return g?IDX.get(g)||null:null}
+function lookup(t){if(!IDX)buildIdx();const k=norm(t),ex=IDX.get(k);
+ if(ex&&ex.v)return ex; // eksakt treff med video vinner alltid
+ const l=lemOf(t);if(l&&(!ex||l.v))return l; // bøyd form -> grunnform (foretrekk video)
+ if(ex)return ex;
  for(const x of SUF)if(k.length-x.length>=2&&k.endsWith(x)){const b=k.slice(0,-x.length);if(IDX.has(b))return IDX.get(b);if(IDX.has(b+'e'))return IDX.get(b+'e')}
  return null}
 function parse(txt){if(!IDX)buildIdx();const toks=txt.split(/\s+/).map(w=>w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu,'')).filter(Boolean),raw=[];
  // infinitivsmerket «å» (kun selve ordet): leses opp, men får ingen tegn-/bildekort. Merkes på neste ord.
- for(let i=0;i<toks.length;i++){if(toks[i].toLowerCase()==='å'&&i+1<toks.length){raw.push({w:toks[i+1],inf:1});i++}else raw.push({w:toks[i]})}
+ const ART=new Set(['en','ei','et']),low=i=>toks[i].toLowerCase();
+ // ubestemt artikkel (en/ei/et) rett foran et ord: leses som skrevet, uten kort – som «å»
+ for(let i=0;i<toks.length;i++){const n=i+1<toks.length&&low(i+1)!=='å'&&!ART.has(low(i+1));
+  if(low(i)==='å'&&i+1<toks.length){raw.push({w:toks[i+1],inf:1});i++}
+  else if(ART.has(low(i))&&n){raw.push({w:toks[i+1],art:toks[i]});i++}else raw.push({w:toks[i]})}
  const out=[];
- for(let i=0;i<raw.length;i++){const a=raw[i].w,f=raw[i].inf?{inf:1}:{};
-  if(i+1<raw.length&&!raw[i+1].inf){const k=norm(a+' '+raw[i+1].w);if(IDX.has(k)){out.push({t:a+' '+raw[i+1].w,e:IDX.get(k),...f});i++;continue}}
+ for(let i=0;i<raw.length;i++){const a=raw[i].w,f=raw[i].inf?{inf:1}:raw[i].art?{art:raw[i].art}:{};
+  if(i+1<raw.length&&!raw[i+1].inf&&!raw[i+1].art){const k=norm(a+' '+raw[i+1].w);if(IDX.has(k)){out.push({t:a+' '+raw[i+1].w,e:IDX.get(k),...f});i++;continue}}
   out.push({t:a,e:lookup(a),...f})}return out}
 window.tegnParse=parse;
 // ---- lyd: forhåndsgenerert norsk kvinnestemme (audio/<id>.mp3), Web Speech som reserve ----
@@ -228,7 +240,7 @@ function drawWords(){$('swords').innerHTML='';SEQ.forEach((x,i)=>{const b=docume
 function playVideo(v,src){return new Promise(res=>{const r=tempo().v;let done=false;const end=()=>{if(done)return;done=true;v.removeEventListener('ended',end);v.removeEventListener('error',end);v.removeEventListener('timeupdate',tu);res()};
  const tu=()=>{if(v.duration&&v.currentTime>=v.duration*0.85)end()};v.addEventListener('timeupdate',tu);v.addEventListener('ended',end);v.addEventListener('error',end);if(v.getAttribute('src')!==src)v.src=src;else v.currentTime=0;
  v.defaultPlaybackRate=v.playbackRate=r;v.addEventListener('loadedmetadata',()=>{v.defaultPlaybackRate=v.playbackRate=r},{once:true});v.play().catch(end);setTimeout(end,15000)})}
-function preload(i){const x=SEQ[i];if(!x)return;if(x.e&&x.e.v)fetch(x.e.v,{mode:'no-cors'}).catch(()=>{});const a=audioFor(x);if(a)fetch(a).catch(()=>{});else if(TTSBAD<2)fetch(ttsUrl(x)).catch(()=>{})}
+function preload(i){const x=SEQ[i];if(!x)return;if(x.art){const aa=audioFor({t:x.art});fetch(aa||ttsUrl({t:x.art})).catch(()=>{})}if(x.e&&x.e.v)fetch(x.e.v,{mode:'no-cors'}).catch(()=>{});const a=audioFor(x);if(a)fetch(a).catch(()=>{});else if(TTSBAD<2)fetch(ttsUrl(x)).catch(()=>{})}
 function preloadAll(){for(let i=0;i<Math.min(SEQ.length,8);i++)preload(i)}
 function setBtn(){return;$('spause').innerHTML=PAUSED||POS>=SEQ.length?'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15L19.5 12z"/></svg>Spill':'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>Pause'}
 // Viktig for iOS: første lyd og video startes synkront i trykket (ingen await/cancel før).
@@ -236,9 +248,10 @@ let UNL=0;function unlockTTS(){if(UNL||!('speechSynthesis' in window))return;UNL
 function playFrom(i){unlockTTS();const run=++RUN;PAUSED=false;ST.style.display='block';$('sctrl').style.display='flex';$('splay').parentNode.style.display='none';POS=i;setBtn();step(run)}
 async function step(run){while(POS<SEQ.length){if(run!==RUN)return;const x=SEQ[POS];drawWords();const v=sv();
   if(x.inf){await playClip(INFSRC,tempo().r);if(run!==RUN)return}
+  else if(x.art){await say({t:x.art});if(run!==RUN)return}
   const a=say(x);let b;if(x.e&&x.e.v){SW.style.display='none';v.style.display='block';b=playVideo(v,x.e.v)}
   else{v.pause();v.style.display='none';SW.textContent=x.t;SW.style.display='grid';b=new Promise(r=>setTimeout(r,700))}
-  preload(POS+1);await Promise.all([a,b]);if(run!==RUN)return;await new Promise(r=>setTimeout(r,SEQ[POS+1]&&SEQ[POS+1].inf?tempo().p*0.35:tempo().p));if(run!==RUN)return;POS++}
+  preload(POS+1);await Promise.all([a,b]);if(run!==RUN)return;await new Promise(r=>setTimeout(r,SEQ[POS+1]&&(SEQ[POS+1].inf||SEQ[POS+1].art)?tempo().p*0.35:tempo().p));if(run!==RUN)return;POS++}
  drawWords();setBtn()}
 window.tegnState=()=>({POS,n:SEQ.length,run:RUN});
 function stop(){RUN++;AU.pause();if(SV)SV.pause();try{if(speechSynthesis.speaking)speechSynthesis.cancel()}catch(e){}}
